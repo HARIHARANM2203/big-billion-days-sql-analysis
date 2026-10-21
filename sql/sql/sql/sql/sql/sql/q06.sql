@@ -1,9 +1,7 @@
 SELECT
-    item,
+    status,
     COUNT(*) AS number_of_orders,
-    SUM(amount) AS revenue
+    SUM(amount) AS total_amount
 FROM orders
-WHERE status = 'completed'
-GROUP BY item
-HAVING SUM(amount) > 20000
-ORDER BY revenue DESC;
+GROUP BY status
+ORDER BY number_of_orders DESC;
