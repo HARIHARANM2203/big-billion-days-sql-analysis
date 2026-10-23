@@ -1,49 +1,46 @@
-# AI Assistance and Verification Log
+# Part D — AI Log, Validation, and Human Review
 
-## 1. Purpose
+## D1. AI Prompt and SQL Debugging
 
-AI assistance was used to draft SQL queries, identify potential defects, correct spreadsheet lookup formulas, and review dashboard recommendations. AI-generated outputs were treated as drafts and checked against the project schema, source data, assignment requirements, and actual query results.
+### Original AI Prompt
 
-## 2. Part A — SQL Query Assistance
+**Role:** Act as an experienced SQL analyst reviewing sales data.
 
-### Prompt Used for q13
+**Task:** Write a SQL query to calculate regional revenue using completed orders only.
 
-**Role:** Act as a SQL analyst and reviewer.
+**Context:** The database uses SQLite and contains three relevant tables:
 
-**Task:** Write a SQL query to evaluate each sales representative's monthly performance against their monthly target.
-
-**Context:** Use the SQLite tables `orders`, `customers`, and `reps`. The `orders` table contains `customer_id`, `order_month`, `status`, and `amount`. The `customers` table contains `customer_id`, `rep_id`, and `region`. The `reps` table contains `rep_id`, `rep_name`, and `monthly_target`.
+- `orders`: `order_id`, `customer_id`, `product_id`, `quantity`, `amount`, `status`, `order_date`
+- `customers`: `customer_id`, `first_name`, `last_name`, `city`, `region`, `age`, `rep_id`
+- `products`: `item`, `category`, `unit_price`
 
 **Constraints:**
-- Include completed orders only.
-- Group results by representative and month.
-- Compare monthly completed-order revenue with the representative's monthly target.
-- Classify performance as `Above Target`, `On Target`, or `Below Target`.
-- Use SQLite-compatible syntax.
-- Do not use common table expressions (`WITH`) or stored procedures.
+- Include only completed orders.
+- Calculate revenue by customer region.
+- Return only regions whose completed revenue exceeds 80,000.
+- Use valid SQLite syntax.
+- Do not use stored procedures or unnecessary CTEs.
 
-**Format:** Return raw SQL with brief inline comments.
+**Output format:** Return the SQL query with brief comments explaining the filtering and aggregation.
 
-### Verification
-
-The q13 query was executed in SQLite Online. Its output contained 12 representative-month combinations: four representatives across September, October, and November 2026. The revenue totals and performance labels were reviewed against the completed-order data.
-
-## 3. Part D1 — Defect Analysis and Correction
-
-The original SQL analysis was reviewed for schema errors, incorrect aggregate filtering, and unsupported statistical claims.
+### Defect Review
 
 | Defect | Classification | Correction |
 |---|---|---|
-| Reference to a table that does not exist in the provided schema | Invalid table reference | Use the actual tables in the project schema. |
-| Reference to columns that do not exist | Invalid column reference | Use the actual column names, including `customer_id`, `region`, `status`, and `amount`. |
-| Aggregate condition placed in `WHERE` | SQL logic/syntax error | Apply aggregate filters with `HAVING` after grouping. |
-| Claim of a 38% increase without supporting data | Unsupported statistic | Recalculate the percentage change using the actual monthly revenue values. |
+| Referenced a table that did not exist in the supplied schema | Schema error | Used the existing `orders` and `customers` tables |
+| Referenced invalid or mismatched column names | Schema error | Used `orders.customer_id`, `orders.amount`, `orders.status`, and `customers.region` |
+| Placed an aggregate condition in `WHERE` | SQL logic error | Applied `HAVING SUM(o.amount) > 80000` after grouping |
+| Included an unsupported claim that revenue increased by 38% | Unsupported inference | Removed the claim and calculated the change from the available monthly figures |
 
-### Corrected D1 SQL
+### Corrected SQL
 
-The corrected query in `sql/d1_corrected.sql` calculates completed-order revenue by region and returns regions whose total exceeds 80,000.
+The following query was executed in SQLite Online.
 
 ```sql
+-- D1: Regional revenue validation
+-- Include completed orders only.
+-- Show regions with completed revenue greater than 80000.
+
 SELECT
     c.region,
     SUM(o.amount) AS total_revenue
@@ -56,111 +53,136 @@ HAVING SUM(o.amount) > 80000
 ORDER BY total_revenue DESC;
 ```
 
-### Actual Verification Results
+### Actual Execution Result
 
-The corrected query was executed successfully in SQLite Online using the project database.
+The query ran successfully and returned these two rows:
 
-The query returned exactly two rows:
-
-| Region | Total revenue |
+| Region | Total Revenue |
 |---|---:|
 | North | 119300 |
 | South | 82500 |
 
-Both values matched the expected results. The query correctly filtered completed orders, grouped the records by region, applied the revenue threshold, and sorted the results in descending order.
+The output matched the expected result. Only regions with completed revenue greater than 80,000 were returned.
 
-### Human-in-the-Loop Verification Protocol
+### Human-in-the-Loop Protocol
 
-**1. Specification:** Confirm that the query answers the regional revenue question, uses the correct schema, includes completed orders only, and applies the threshold of 80,000.
+**1. Specification:** I defined the required output as regional revenue from completed orders only, with a threshold greater than 80,000.
 
-**2. Execution:** Run the corrected SQL in SQLite Online using the project's schema and seeded data.
+**2. Execution:** I ran the corrected query in SQLite Online using the project's schema and seed script.
 
-**3. Inspection:** Review the returned region names, revenue values, sorting, and threshold condition.
+**3. Inspection:** I checked the returned column names, region names, revenue totals, and descending order.
 
-**4. Verification:** Compare the actual query output with the expected results and recalculate the monthly percentage change using the source figures.
+**4. Verification:** The query returned North with 119,300 and South with 82,500. Both totals exceed the specified threshold.
 
-**5. Decision:** Reject the defective original query where it contains invalid references, incorrect aggregate filtering, or unsupported statistics. Accept the corrected query after its execution produces the expected results.
+**5. Decision:** I rejected the defective original query because of its schema and aggregation errors. I accepted the corrected query because it executed successfully and produced the expected two-row result.
 
 ### Monthly Revenue Change Check
 
-North region recorded revenue of 53,500 in September and 41,300 in October.
+The available monthly figures for North were:
 
-Percentage change:
+- September: 53,500
+- October: 41,300
+
+The absolute change was:
+
+41,300 − 53,500 = −12,200
+
+The percentage change was:
 
 \[
 \frac{41,300-53,500}{53,500}\times100
-\approx -22.8\%
+\approx -22.80\%
 \]
 
-The result indicates a decrease of approximately 22.8%, not an increase of 38%. This demonstrates why numerical claims must be checked against the underlying data.
+North's revenue decreased by approximately 22.80% from September to October. Therefore, a claim that revenue increased by 38% is not supported by these figures.
 
-## 4. Part D2 — Spreadsheet Lookup Defect
+---
 
-### Problem
+## D2. Spreadsheet Lookup Debugging
 
-A product lookup may fail when the lookup key contains an unwanted leading space. For example, cell G2 contains `" Smart Watch"`, while the product table contains `"Smart Watch"`.
+### Problem Context
+
+The spreadsheet uses an `orders` worksheet and a `products` worksheet. The product lookup table occupies the range `products!A2:C10`.
+
+The product name is in column G of the orders worksheet, and the unit-price lookup formula is in column O. In this workbook, the first relevant data row is row 3.
+
+A product name containing an unintended leading or trailing space may fail to match the corresponding product name in the lookup table.
 
 ### Original Formula
 
 ```excel
-=XLOOKUP(G2,products!$A$2:$A$10,products!$C$2:$C$10,"UNKNOWN_ITEM")
+=XLOOKUP(G3,products!$A$2:$A$10,products!$C$2:$C$10,"UNKNOWN_ITEM")
 ```
+
+### Root Cause
+
+The original formula uses the product name exactly as stored in `G3`. If the name contains an extra leading or trailing space that is not present in the lookup table, the lookup may not find a match and may return `UNKNOWN_ITEM`.
 
 ### Corrected Formula
 
 ```excel
-=XLOOKUP(TRIM(G2),products!$A$2:$A$10,products!$C$2:$C$10,"UNKNOWN_ITEM")
+=XLOOKUP(TRIM(G3),products!$A$2:$A$10,products!$C$2:$C$10,"UNKNOWN_ITEM")
 ```
 
-### Explanation
+`TRIM(G3)` removes leading and trailing spaces and reduces repeated internal spaces to single spaces. This helps the product name match the lookup table.
 
-`TRIM(G2)` removes leading and trailing spaces before the lookup is performed. This helps the cleaned product name match the product table. The fallback text `UNKNOWN_ITEM` identifies a product name that cannot be matched.
+### Verification and Limitation
 
-### Verification Procedure
+I updated the formula in cell `O3` to use `TRIM(G3)` and confirmed that a price was displayed. However, this observation alone does not establish that a deliberately space-padded product name was tested separately.
 
-1. Test the formula with the product name `" Smart Watch"`.
-2. Confirm that the lookup returns the matching product price.
-3. Test the formula with a genuinely unknown product name.
-4. Confirm that the formula returns `UNKNOWN_ITEM` when no match exists.
+A complete validation should test a product name with a leading space, confirm that the corrected formula returns its expected unit price, and test an unknown product to confirm that the fallback value `UNKNOWN_ITEM` is displayed.
 
-The formula is designed to correct the leading-space issue. The test outcomes should only be reported as completed after the formulas have been checked in the spreadsheet.
+---
 
-## 5. Part C — Skeptical Review of a Dashboard Recommendation
+## D3. Skeptical Review of a Business Recommendation
 
 ### Recommendation Under Review
 
-Prioritize Air Fryer promotions because Air Fryer generated the highest completed-order revenue.
+The Air Fryer is the highest-revenue product and should receive additional promotional investment.
+
+The available product-revenue results show:
+
+| Product | Revenue | Revenue Classification |
+|---|---:|---|
+| Air Fryer | 104000 | High |
+| Smart Watch | 67500 | High |
+| Wireless Earbuds | 60800 | High |
+
+Air Fryer has the highest recorded revenue among these products. However, revenue alone does not prove that additional promotion will be profitable.
 
 ### Skeptical Analyst Prompt
 
-Act as a skeptical business analyst. Review the recommendation to prioritize Air Fryer promotions using the available sales data. Identify unstated assumptions, distinguish revenue from profit, and propose data checks that would support or reject the recommendation. Do not assume that the highest revenue automatically means the highest profitability.
+**Role:** Act as a skeptical business analyst reviewing a sales recommendation.
 
-### Three Assumptions and Required Checks
+**Task:** Evaluate whether the Air Fryer should receive additional promotional investment.
 
-**Assumption 1: High revenue means high profit.**
+**Context:** The SQL analysis reports Air Fryer revenue of 104,000, Smart Watch revenue of 67,500, and Wireless Earbuds revenue of 60,800.
 
-- **Check:** Obtain product cost and promotional expense data.
-- **Evidence:** Calculate gross profit and profit margin for Air Fryer compared with other products.
-- **Decision:** Do not claim Air Fryer is the most profitable product until the relevant cost and margin figures are available.
+**Constraints:** Do not assume that high revenue automatically means high profit, high demand growth, or high promotional effectiveness. Identify three assumptions and specify evidence needed to test each one.
 
-**Assumption 2: The recorded sales pattern will continue.**
+**Output format:** Provide a table with each assumption, why it matters, and the data check required.
 
-- **Check:** Compare Air Fryer sales across September, October, and November.
-- **Evidence:** Review monthly revenue and quantity sold.
-- **Decision:** Treat the recommendation as provisional if demand varies significantly by month.
+### Three Assumptions and Evidence Checks
 
-**Assumption 3: Promotions will increase sales without reducing overall returns.**
+| Assumption | Why It Matters | Data Check Required |
+|---|---|---|
+| Higher revenue means higher profit | Revenue does not account for product costs, discounts, or promotional expenses | Compare product-level gross profit and margin, including relevant costs |
+| Air Fryer demand will continue | Historical revenue alone does not establish future demand | Compare monthly Air Fryer revenue and units sold over the available period |
+| Additional promotion will increase sales profitably | Promotion may not generate enough additional sales to cover its cost | Compare campaign spending, sales before and after promotion, and incremental profit |
 
-- **Check:** Compare promotion and non-promotion periods using units sold, revenue, discounts, and profit.
-- **Evidence:** Calculate incremental revenue and profit associated with promotions.
-- **Decision:** Recommend a promotion only when the measured benefit supports its cost.
+### Decision
 
-### Conclusion
+Air Fryer is the highest-revenue product in the current results, with recorded revenue of 104,000. This supports considering it for further analysis, but it does not prove that it is the most profitable product or that increased advertising will produce the best return.
 
-The available data shows that Air Fryer generated 104,000 in completed-order revenue, the highest among the products listed in query q12. However, revenue alone cannot establish profitability or prove that a promotion will be successful. The recommendation should be tested using product costs, margins, and promotion-performance data.
+Before approving additional promotional spending, I would review product margins, monthly sales trends, and campaign performance. The recommendation should remain provisional until those checks are completed.
 
-## 6. Final Review
+---
 
-AI-generated SQL queries and spreadsheet formulas are drafts, not automatically trusted answers. The corrected D1 query was executed and its output matched the expected regional revenue results. Other formulas and recommendations require the appropriate data checks before their results can be considered verified.
+## Final Validation Summary
 
-Human review, source-data comparison, and reproducible query execution are essential for producing reliable analytical results.
+- The corrected D1 SQL query was executed successfully in SQLite Online.
+- The D1 output matched the expected North and South revenue results.
+- The D2 lookup formula was updated to use `TRIM(G3)`, and a price was displayed.
+- A separate test using an intentionally space-padded product name and an unknown product remains necessary for complete D2 verification.
+- The Air Fryer recommendation was reviewed critically, with three assumptions and corresponding evidence checks documented.
+- All findings should be interpreted within the limits of the available dataset.
