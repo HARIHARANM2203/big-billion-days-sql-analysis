@@ -6,10 +6,9 @@ The dashboard analyzes completed orders, regional revenue,
 sales representative performance, and monthly order trends.
 
 ### 2. Key Performance Indicators (KPIs)
-
 | KPI                     | Value  |
-|                         |        |
-| Total Completed Orders  | 63     |
+|-------------------------|-------|
+| Total Completed Orders  | 63    |
 | Total Completed Revenue | 346200 |
 
 Revenue is calculated using the amount field for completed orders.
