@@ -28,8 +28,6 @@ This document records the results of the SQL queries executed for the project.
 
 ## Notes
 
-## Notes
-
 The row counts and KPI values above reflect the results recorded during the project workflow. The Q11–Q13 row counts are recorded above, and their detailed outputs are saved in the corresponding query-result files.
 
 The total recorded amount is the sum of the `amount` field for completed orders. It should not be confused with a separately calculated revenue field unless both have been verified to match.
