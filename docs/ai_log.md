@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-AI assistance was used to draft SQL queries, identify possible defects, correct spreadsheet lookup formulas, and review dashboard recommendations. All outputs must be checked against the project schema, source data, and assignment requirements before acceptance.
+AI assistance was used to draft SQL queries, identify potential defects, correct spreadsheet lookup formulas, and review dashboard recommendations. AI-generated outputs were treated as drafts and checked against the project schema, source data, assignment requirements, and actual query results.
 
 ## 2. Part A — SQL Query Assistance
 
@@ -12,7 +12,7 @@ AI assistance was used to draft SQL queries, identify possible defects, correct 
 
 **Task:** Write a SQL query to evaluate each sales representative's monthly performance against their monthly target.
 
-**Context:** Use the SQLite database tables `orders`, `customers`, and `reps`. The `orders` table contains order details, including `customer_id`, `order_month`, `status`, and `amount`. The `customers` table contains `customer_id`, `rep_id`, and `region`. The `reps` table contains `rep_id`, `rep_name`, and `monthly_target`.
+**Context:** Use the SQLite tables `orders`, `customers`, and `reps`. The `orders` table contains `customer_id`, `order_month`, `status`, and `amount`. The `customers` table contains `customer_id`, `rep_id`, and `region`. The `reps` table contains `rep_id`, `rep_name`, and `monthly_target`.
 
 **Constraints:**
 - Include completed orders only.
@@ -26,20 +26,22 @@ AI assistance was used to draft SQL queries, identify possible defects, correct 
 
 ### Verification
 
-The q13 query was executed in SQLite Online. Its output contained 12 representative-month combinations: four representatives across September, October, and November 2026. The revenue totals and performance labels were compared with the completed-order data.
+The q13 query was executed in SQLite Online. Its output contained 12 representative-month combinations: four representatives across September, October, and November 2026. The revenue totals and performance labels were reviewed against the completed-order data.
 
 ## 3. Part D1 — Defect Analysis and Correction
 
+The original SQL analysis was reviewed for schema errors, incorrect aggregate filtering, and unsupported statistical claims.
+
 | Defect | Classification | Correction |
 |---|---|---|
-| Query references a table that does not exist in the provided schema. | Invalid table reference | Use the actual tables in the project schema. |
-| Query references columns that do not exist. | Invalid column reference | Replace them with the actual column names, such as `customer_id`, `region`, `status`, and `amount`. |
-| An aggregate condition is placed in `WHERE`. | SQL logic/syntax error | Apply aggregate filters with `HAVING` after grouping. |
-| The original analysis claims a 38% increase without supporting data. | Unsupported statistic | Recalculate the change using the actual monthly revenue figures. |
+| Reference to a table that does not exist in the provided schema | Invalid table reference | Use the actual tables in the project schema. |
+| Reference to columns that do not exist | Invalid column reference | Use the actual column names, including `customer_id`, `region`, `status`, and `amount`. |
+| Aggregate condition placed in `WHERE` | SQL logic/syntax error | Apply aggregate filters with `HAVING` after grouping. |
+| Claim of a 38% increase without supporting data | Unsupported statistic | Recalculate the percentage change using the actual monthly revenue values. |
 
 ### Corrected D1 SQL
 
-The corrected query in `sql/d1_corrected.sql` groups completed-order revenue by region and keeps regions whose revenue exceeds 80,000.
+The corrected query in `sql/d1_corrected.sql` calculates completed-order revenue by region and returns regions whose total exceeds 80,000.
 
 ```sql
 SELECT
@@ -54,30 +56,34 @@ HAVING SUM(o.amount) > 80000
 ORDER BY total_revenue DESC;
 ```
 
-### Expected Verification Output
+### Actual Verification Results
+
+The corrected query was executed successfully in SQLite Online using the project database.
+
+The query returned exactly two rows:
 
 | Region | Total revenue |
 |---|---:|
 | North | 119300 |
 | South | 82500 |
 
-These values must be confirmed by running the corrected query against the project's actual database before final submission.
+Both values matched the expected results. The query correctly filtered completed orders, grouped the records by region, applied the revenue threshold, and sorted the results in descending order.
 
 ### Human-in-the-Loop Verification Protocol
 
-**1. Specification:** Check that the query answers the regional revenue question, uses the actual schema, includes completed orders only, and applies the 80,000 threshold.
+**1. Specification:** Confirm that the query answers the regional revenue question, uses the correct schema, includes completed orders only, and applies the threshold of 80,000.
 
-**2. Execution:** Run the corrected SQL using SQLite Online with the project's schema and seeded data.
+**2. Execution:** Run the corrected SQL in SQLite Online using the project's schema and seeded data.
 
-**3. Inspection:** Check the returned region names, revenue values, sorting, and whether every returned region satisfies the threshold.
+**3. Inspection:** Review the returned region names, revenue values, sorting, and threshold condition.
 
-**4. Verification:** Compare the output against the source data and the expected values shown above. Recalculate any claimed percentage change from the relevant monthly revenue figures.
+**4. Verification:** Compare the actual query output with the expected results and recalculate the monthly percentage change using the source figures.
 
-**5. Decision:** Reject the original query if it contains invalid references, incorrect aggregate filtering, or unsupported statistics. Accept the corrected query only after its output matches the executed database results.
+**5. Decision:** Reject the defective original query where it contains invalid references, incorrect aggregate filtering, or unsupported statistics. Accept the corrected query after its execution produces the expected results.
 
 ### Monthly Revenue Change Check
 
-For North region, September revenue was 53,500 and October revenue was 41,300.
+North region recorded revenue of 53,500 in September and 41,300 in October.
 
 Percentage change:
 
@@ -86,13 +92,13 @@ Percentage change:
 \approx -22.8\%
 \]
 
-Therefore, the figures indicate a decrease of approximately 22.8%, not an increase of 38%.
+The result indicates a decrease of approximately 22.8%, not an increase of 38%. This demonstrates why numerical claims must be checked against the underlying data.
 
 ## 4. Part D2 — Spreadsheet Lookup Defect
 
 ### Problem
 
-A product lookup may fail when the lookup key contains an unwanted leading space. For example, the product name in cell G2 is `" Smart Watch"`, while the product table contains `"Smart Watch"`.
+A product lookup may fail when the lookup key contains an unwanted leading space. For example, cell G2 contains `" Smart Watch"`, while the product table contains `"Smart Watch"`.
 
 ### Original Formula
 
@@ -108,20 +114,22 @@ A product lookup may fail when the lookup key contains an unwanted leading space
 
 ### Explanation
 
-`TRIM(G2)` removes leading and trailing spaces before the lookup is performed. This allows the cleaned product name to match the product table. The fallback text `UNKNOWN_ITEM` remains useful for detecting genuinely missing product names.
+`TRIM(G2)` removes leading and trailing spaces before the lookup is performed. This helps the cleaned product name match the product table. The fallback text `UNKNOWN_ITEM` identifies a product name that cannot be matched.
 
-### Verification Steps
+### Verification Procedure
 
-1. Test the formula with the value `" Smart Watch"`.
+1. Test the formula with the product name `" Smart Watch"`.
 2. Confirm that the lookup returns the matching product price.
-3. Test a genuinely unknown product name.
-4. Confirm that the formula returns `UNKNOWN_ITEM` for the unknown key.
+3. Test the formula with a genuinely unknown product name.
+4. Confirm that the formula returns `UNKNOWN_ITEM` when no match exists.
+
+The formula is designed to correct the leading-space issue. The test outcomes should only be reported as completed after the formulas have been checked in the spreadsheet.
 
 ## 5. Part C — Skeptical Review of a Dashboard Recommendation
 
 ### Recommendation Under Review
 
-Prioritize Air Fryer promotions because it generated the highest completed-order revenue.
+Prioritize Air Fryer promotions because Air Fryer generated the highest completed-order revenue.
 
 ### Skeptical Analyst Prompt
 
@@ -133,7 +141,7 @@ Act as a skeptical business analyst. Review the recommendation to prioritize Air
 
 - **Check:** Obtain product cost and promotional expense data.
 - **Evidence:** Calculate gross profit and profit margin for Air Fryer compared with other products.
-- **Decision:** Do not claim that Air Fryer is the most profitable product until these figures are available.
+- **Decision:** Do not claim Air Fryer is the most profitable product until the relevant cost and margin figures are available.
 
 **Assumption 2: The recorded sales pattern will continue.**
 
@@ -149,8 +157,10 @@ Act as a skeptical business analyst. Review the recommendation to prioritize Air
 
 ### Conclusion
 
-The available data shows that Air Fryer generated 104,000 in completed-order revenue, the highest among the listed products. However, revenue alone cannot establish profitability or prove that a promotion will be successful. The recommendation should be tested using cost, margin, and promotion-performance data.
+The available data shows that Air Fryer generated 104,000 in completed-order revenue, the highest among the products listed in query q12. However, revenue alone cannot establish profitability or prove that a promotion will be successful. The recommendation should be tested using product costs, margins, and promotion-performance data.
 
 ## 6. Final Review
 
-AI-generated SQL and spreadsheet formulas are drafts, not automatically trusted answers. Final acceptance requires execution, comparison with source data, verification of calculated values, and human review. Unsupported claims must be removed or clearly identified as unverified.
+AI-generated SQL queries and spreadsheet formulas are drafts, not automatically trusted answers. The corrected D1 query was executed and its output matched the expected regional revenue results. Other formulas and recommendations require the appropriate data checks before their results can be considered verified.
+
+Human review, source-data comparison, and reproducible query execution are essential for producing reliable analytical results.
