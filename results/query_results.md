@@ -16,9 +16,9 @@ This document records the results of the SQL queries executed for the project.
 | Q08 | Query analysis | 4 rows |
 | Q09 | Enriched order dataset | 90 rows |
 | Q10 | Query analysis | 4 rows |
-| Q11 | See executed SQL query and output |
-| Q12 | See executed SQL query and output |
-| Q13 | See executed SQL query and output |
+| Q11 | Monthly regional sales analysis | 12 rows |
+| Q12 | Product revenue contribution tiers | 9 rows |
+| Q13 | Monthly sales representative target performance | 12 rows |
 
 ## Validation
 
